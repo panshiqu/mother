@@ -5,6 +5,33 @@ USING_NS_CC;
 
 using namespace cocos2d::ui;
 
+#if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+	extern "C"
+	{
+		void Java_org_cocos2dx_cpp_AppActivity_setImagePath(JNIEnv *env, jobject thiz, jstring str)
+		{
+			// 网上搜集
+			char *rtn = NULL;
+			jclass clsstring = (*env).FindClass("java/lang/String");
+			jstring strencode = (*env).NewStringUTF("utf-8");
+			jmethodID mid = (*env).GetMethodID(clsstring, "getBytes", "(Ljava/lang/String;)[B");
+			jbyteArray barr= (jbyteArray)(*env).CallObjectMethod(str, mid, strencode);
+			jsize alen = (*env).GetArrayLength(barr);
+			jbyte* ba = (*env).GetByteArrayElements(barr, JNI_FALSE);
+			if (alen > 0)
+			{
+				rtn = (char*)malloc(alen + 1);
+				memcpy(rtn, ba, alen);
+				rtn[alen] = 0;
+			}
+
+			(*env).ReleaseByteArrayElements(barr, ba, 0);
+			MainScene *runningScene = (MainScene *)Director::getInstance()->getRunningScene();
+			runningScene->setImagePath(rtn);
+		}
+	}
+#endif
+
 MainScene::MainScene()
 {
 }
@@ -35,11 +62,8 @@ bool MainScene::init()
 
 	// 创建首页列表容器
 	_listView = ListView::create();
-	_listView->setContentSize(Size(visibleSize.width, visibleSize.height - 100.0f));
-	_listView->setPosition(Vec2(0, 100.0f));
 	_listView->setBounceEnabled(true);
-	_listView->setBackGroundImage("background.png");
-	_listView->setBackGroundImageScale9Enabled(true);
+	_listView->setContentSize(visibleSize);
 	layout->addChild(_listView);
 
 	// 添加退出按钮
@@ -55,17 +79,21 @@ bool MainScene::init()
 	layoutList->setContentSize(Size(visibleSize.width, LISTVIEW_HEIGHT));
 
 	// 名称编辑框
-	_editName = EditBox::create(Size(visibleSize.width / 3.0f, LISTVIEW_HEIGHT), "background_edit.png");
+	_editName = EditBox::create(Size(visibleSize.width / 5.0f, LISTVIEW_HEIGHT), "background_green.png");
 	_editName->setAnchorPoint(Vec2(0.0f, 0.0f));
+	_editName->setFont("Arial", 24);
 	_editName->setPlaceHolder("Name:");
+	_editName->setPlaceholderFont("Arial", 24);
 	_editName->setPlaceholderFontColor(Color4B::WHITE);
 	layoutList->addChild(_editName);
 
 	// 联系方式编辑框
-	_editNumber = EditBox::create(Size(visibleSize.width / 3.0f, LISTVIEW_HEIGHT), "background_edit.png");
-	_editNumber->setPosition(Vec2(visibleSize.width / 10.0f + visibleSize.width / 3.0f, 0));
+	_editNumber = EditBox::create(Size(visibleSize.width / 2.5f, LISTVIEW_HEIGHT), "background_green.png");
+	_editNumber->setPosition(Vec2(visibleSize.width / 30.0f + visibleSize.width / 5.0f, 0));
 	_editNumber->setAnchorPoint(Vec2(0.0f, 0.0f));
+	_editNumber->setFont("Arial", 24);
 	_editNumber->setPlaceHolder("Number:");
+	_editNumber->setPlaceholderFont("Arial", 24);
 	_editNumber->setPlaceholderFontColor(Color4B::WHITE);
 	layoutList->addChild(_editNumber);
 
@@ -109,7 +137,23 @@ void MainScene::onSelectButton(cocos2d::Ref *sender, cocos2d::ui::Widget::TouchE
 		Button *button = dynamic_cast<Button *>(sender);
 		if (button->getTouchBeganPosition() == button->getTouchEndPosition())
 		{
-			CCLOG("%s\n", "onSelectButton");
+#if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+			jobject jobj;
+			JniMethodInfo minfo;
+			bool isHave = JniHelper::getStaticMethodInfo(minfo, "org/cocos2dx/cpp/AppActivity", "getInstance", "()Ljava/lang/Object;");
+
+			if (isHave) {
+				CCLOG("getInstance\n");
+				jobj = minfo.env->CallStaticObjectMethod(minfo.classID, minfo.methodID);
+			}
+
+			isHave = JniHelper::getMethodInfo(minfo, "org/cocos2dx/cpp/AppActivity", "onSelect", "()V");
+
+			if (isHave) {
+				CCLOG("onSelect\n");
+				minfo.env->CallVoidMethod(jobj, minfo.methodID);
+			}
+#endif
 		}
 	}
 }
@@ -178,7 +222,26 @@ void MainScene::onContactButton(cocos2d::Ref *sender, cocos2d::ui::Widget::Touch
 		Button *button = dynamic_cast<Button *>(sender);
 		if (button->getTouchBeganPosition() == button->getTouchEndPosition())
 		{
-			CCLOG("%s\n", "onContactButton");
+#if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+			jobject jobj;
+			JniMethodInfo minfo;
+			bool isHave = JniHelper::getStaticMethodInfo(minfo, "org/cocos2dx/cpp/AppActivity", "getInstance", "()Ljava/lang/Object;");
+
+			if (isHave) {
+				CCLOG("getInstance\n");
+				jobj = minfo.env->CallStaticObjectMethod(minfo.classID, minfo.methodID);
+			}
+
+			isHave = JniHelper::getMethodInfo(minfo, "org/cocos2dx/cpp/AppActivity", "callNumber", "(Ljava/lang/String;)V");
+
+			if (isHave) {
+				CCLOG("callNumber\n");
+				std::ostringstream oss;
+				oss << "tel:" << number;
+				jstring jmsg = minfo.env->NewStringUTF(oss.str().c_str());
+				minfo.env->CallVoidMethod(jobj, minfo.methodID, jmsg);
+			}
+#endif
 		}
 	}
 }
@@ -193,13 +256,14 @@ void MainScene::addListView(size_t index, CONTACT *contact)
 	layout->setContentSize(Size(visibleSize.width, LISTVIEW_HEIGHT));
 
 	// 名称
-	auto *textName = Text::create(contact->name, "Arial", TEXT_FONT_SIZE);
+	std::string name = "  " + contact->name;
+	auto *textName = Text::create(name, "Arial", 24);
 	textName->setAnchorPoint(Vec2(0.0f, 0.0f));
 	layout->addChild(textName);
 
 	// 联系方式
-	auto *textNumber = Text::create(contact->number, "Arial", TEXT_FONT_SIZE);
-	textNumber->setPosition(Vec2(visibleSize.width / 10.0f + visibleSize.width / 3.0f, 0));
+	auto *textNumber = Text::create(contact->number, "Arial", 24);
+	textNumber->setPosition(Vec2(visibleSize.width / 30.0f + visibleSize.width / 5.0f, 0));
 	textNumber->setAnchorPoint(Vec2(0.0f, 0.0f));
 	layout->addChild(textNumber);
 
@@ -234,9 +298,10 @@ void MainScene::addPageView(CONTACT *contact)
 	layout->setBackGroundImageScale9Enabled(true);
 
 	// 创建联系人按钮图标
-	auto *contactButton = Button::create("HelloWorld.png");
+	auto *contactButton = Button::create(contact->image);
 	contactButton->addTouchEventListener(CC_CALLBACK_2(MainScene::onContactButton, this, contact->number));
-	contactButton->setPosition(Vec2(visibleSize.width / 2.0f, visibleSize.height / 2.0f));
+	contactButton->setScale(visibleSize.width / contactButton->getContentSize().width);
+	contactButton->setAnchorPoint(Vec2(0.0f, 0.0f));
 	layout->addChild(contactButton);
 
 	_pageView->addPage(layout);

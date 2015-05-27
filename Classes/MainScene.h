@@ -3,6 +3,12 @@
 #include "ui/CocosGUI.h"
 #include "Mother.h"
 
+#if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+#include <jni.h>
+#include <android/log.h>
+#include "platform/android/jni/JniHelper.h"
+#endif
+
 class MainScene : public cocos2d::Scene
 {
 public:
@@ -18,6 +24,9 @@ public:
 	void onDeleteButton(cocos2d::Ref *sender, cocos2d::ui::Widget::TouchEventType type, size_t index);
 	void onContactButton(cocos2d::Ref *sender, cocos2d::ui::Widget::TouchEventType type, std::string number);
 	void onExitButton(cocos2d::Ref *sender, cocos2d::ui::Widget::TouchEventType type);
+
+public:
+	void setImagePath(const char *imagePath)	{ _imagePath = imagePath; }
 
 private:
 	void addListView(size_t index, CONTACT *contact);

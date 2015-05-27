@@ -1,8 +1,8 @@
-#pragma once
+#ifndef  _MOTHER_H_
+#define  _MOTHER_H_
 #include <string>
 
 #define LISTVIEW_HEIGHT 60.0f
-#define TEXT_FONT_SIZE 32
 
 struct CONTACT
 {
@@ -25,3 +25,5 @@ struct CONTACT
 	static classname instance; \
 	return instance; \
 }
+
+#endif
