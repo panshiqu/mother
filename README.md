@@ -1,6 +1,8 @@
 # mother
 a face telephone book for mother
 
+2015/9/18：已确认存在如下BUG，但是短期暂不修复，BUG描述如下：程序安装至携带内存卡的android手机中，选择联系人头像将导致程序异常，目前已确认引起原因是头像文件存在内存卡引发路径问题，若仅是想测试程序可用性请暂时使用不安装内存卡的android手机进行测试  
+
 Bin:存放android安装文件  
 Classes:对应cocos2d-x-3.6创建项目Classes文件夹  
 Resources:对应cocos2d-x-3.6创建项目Resources文件夹  
